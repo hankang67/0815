@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo Service</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500&display=swap" rel="stylesheet">
+
+    <style>
+        @import url(//spoqa.github.io/spoqa-han-sans/css/SpoqaHanSans-kr.css);
+
+        body {
+            margin: 0px;
+        }
+
+        .wrap {
+            width: 600px;
+            margin: 20px auto;
+        }
+
+        .area-write {
+            position: relative;
+            width: 600px;
+        }
+
+        .area-write img {
+            cursor: pointer;
+            position: absolute;
+            width: 22.2px;
+            height: 18.7px;
+            bottom: 15px;
+            right: 17px;
+        }
+
+        .background-header {
+            position: fixed;
+            z-index: -1;
+            top: 0px;
+            width: 100%;
+            height: 428px;
+            background-color: #339af0;
+        }
+
+        .background-body {
+            position: fixed;
+            z-index: -1;
+            top: 428px;
+            height: 100%;
+            width: 100%;
+            background-color: #dee2e6;
+        }
+
+        .header {
+            margin-top: 50px;
+        }
+
+        .header h2 {
+            height: 33px;
+            font-size: 42px;
+            font-weight: 500;
+            font-stretch: normal;
+            font-style: normal;
+            line-height: 0.79;
+            letter-spacing: -0.5px;
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .header p {
+            margin: 40px auto;
+            width: 217px;
+            height: 48px;
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            font-stretch: normal;
+            font-style: normal;
+            line-height: 1.5;
+            letter-spacing: -1.12px;
+            text-align: center;
+            color: #ffffff;
+        }
+
+        textarea.field, input.field {
+            width: 580px;
+            height: 40px;
+            border-radius: 5px;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            resize: none;
+            margin-bottom: 10px;
+        }
+
+        .card {
+            width: 600px;
+            border-radius: 5px;
+            background-color: #ffffff;
+            margin-bottom: 12px;
+            padding: 15px;
+        }
+
+        .card .metadata {
+            display: flex;
+            font-family: 'Spoqa Han Sans';
+            font-size: 11px;
+            font-weight: normal;
+            color: #adb5bd;
+        }
+
+        .metadata .date, .metadata .username {
+            margin-right: 20px;
+        }
+
+        .footer {
+            position: relative;
+            height: 40px;
+        }
+
+        .footer img.icon-delete {
+            cursor: pointer;
+            position: absolute;
+            bottom: 12px;
+            right: 19px;
+            width: 14px;
+            height: 18px;
+        }
+
+        #cards-box {
+            margin-top: 12px;
+        }
+    </style>
+    <script>
+        $(document).ready(function () {
+            // HTML 문서를 로드할 때마다 실행합니다.
+            getTodos();
+        })
+
+        // 할 일을 불러와서 보여줍니다.
+        function getTodos() {
+            $('#cards-box').empty();
+            $.ajax({
+                type: 'GET',
+                url: '/api/todos',
+                success: function (response) {
+                    for (let i = 0; i < response.length; i++) {
+                        let todo = response[i];
+                        let id = todo['id'];
+                        let title = todo['title'];
+                        let username = todo['username'];
+                        let contents = todo['description'];
+                        let createdAt = todo['createdAt'];
+                        let updatedAt = todo['updatedAt'];
+                        addTodoHTML(id, title, username, contents, createdAt, updatedAt);
+                    }
+                }
+            })
+        }
+
+        // 일정 하나를 HTML로 만들어서 화면에 표시합니다.
+        function addTodoHTML(id, title, username, contents, createdAt, updatedAt) {
+            let tempHtml = `<div class="card">
+                <div class="metadata">
+                    <div class="date">작성일: ${createdAt}</div>
+                    <div class="date">수정일: ${updatedAt}</div>
+                    <div class="username">담당자: ${username}</div>
+                </div>
+                <div class="contents">
+                    <div>제목: ${title}</div>
+                    <div>내용: ${contents}</div>
+                </div>
+                <div class="footer">
+                    <img id="${id}-delete" class="icon-delete" src="images/delete.png" alt="" onclick="deleteOne('${id}')">
+                </div>
+            </div>`;
+            $('#cards-box').append(tempHtml);
+        }
+
+        // 할 일을 작성합니다.
+        function writeTodo() {
+            let title = $('#title').val().trim();
+            let contents = $('#contents').val().trim();
+            let username = $('#username').val().trim();
+            let password = $('#password').val().trim();
+
+            if (!isValidContents(title, contents, username, password)) {
+                return;
+            }
+
+            let data = {
+                'title': title,
+                'description': contents,
+                'username': username,
+                'password': password,
+                'createdAt': new Date().toISOString(), // ISO 8601 형식으로 현재 날짜와 시간 저장
+                'updatedAt': new Date().toISOString()
+            };
+
+            $.ajax({
+                type: "POST",
+                url: "/api/todos",
+                contentType: "application/json",
+                data: JSON.stringify(data),
+                success: function (response) {
+                    alert('할 일이 성공적으로 작성되었습니다.');
+                    window.location.reload();
+                }
+            });
+        }
+
+        // 할 일을 삭제합니다.
+        function deleteOne(id) {
+            $.ajax({
+                type: "DELETE",
+                url: `/api/todos/${id}`,
+                success: function (response) {
+                    alert('할 일이 삭제되었습니다.');
+                    window.location.reload();
+                }
+            })
+        }
+
+        function isValidContents(title, contents, username, password) {
+            if (title == '' || contents == '' || username == '' || password == '') {
+                alert('모든 필드를 채워주세요');
+                return false;
+            }
+            return true;
+        }
+    </script>
+</head>
+
+<body>
+<div class="background-header"></div>
+<div class="background-body"></div>
+<div class="wrap">
+    <div class="header">
+        <h2>Todo Management</h2>
+    </div>
+    <div class="area-write">
+        <input class="field" type="text" placeholder="할 일 제목" id="title">
+        <textarea class="field" placeholder="할 일 내용을 적어주세요" id="contents"></textarea>
+        <input class="field" type="text" placeholder="담당자명" id="username">
+        <input class="field" type="password" placeholder="비밀번호" id="password">
+        <img src="images/send.png" alt="" onclick="writeTodo()">
+    </div>
+    <div id="cards-box" class="area-read"></div>
+</div>
+</body>
+
+</html>
