@@ -14,6 +14,5 @@ public class TodoRequestDto {
     private String username;
     private String password;
     private String description;
-    private String createdAt;
     private String updatedAt;
 }
