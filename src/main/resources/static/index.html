@@ -132,19 +132,29 @@
         #cards-box {
             margin-top: 12px;
         }
+
+        .footer img.icon-start-edit {
+            cursor: pointer;
+            position: absolute;
+            bottom: 14px;
+            right: 55px;
+            width: 18px;
+            height: 18px;
+        }
+
     </style>
     <script>
         $(document).ready(function () {
             // HTML 문서를 로드할 때마다 실행합니다.
             getTodos();
-        })
+        });
 
         // 할 일을 불러와서 보여줍니다.
         function getTodos() {
             $('#cards-box').empty();
             $.ajax({
                 type: 'GET',
-                url: '/api/todos',
+                url: 'http://localhost:8080/api/todos',
                 success: function (response) {
                     for (let i = 0; i < response.length; i++) {
                         let todo = response[i];
@@ -157,7 +167,7 @@
                         addTodoHTML(id, title, username, contents, createdAt, updatedAt);
                     }
                 }
-            })
+            });
         }
 
         // 일정 하나를 HTML로 만들어서 화면에 표시합니다.
@@ -169,11 +179,13 @@
                     <div class="username">담당자: ${username}</div>
                 </div>
                 <div class="contents">
-                    <div>제목: ${title}</div>
-                    <div>내용: ${contents}</div>
+                    <div id="${id}-contents">${contents}</div>
+                    <textarea id="${id}-textarea" style="display:none; width: 100%;">${contents}</textarea>
                 </div>
                 <div class="footer">
+                    <img id="${id}-edit" class="icon-start-edit" src="images/edit.png" alt="" onclick="editPost('${id}')">
                     <img id="${id}-delete" class="icon-delete" src="images/delete.png" alt="" onclick="deleteOne('${id}')">
+                    <img id="${id}-submit" class="icon-submit" src="images/submit.png" alt="" style="display:none;" onclick="submitEdit('${id}')">
                 </div>
             </div>`;
             $('#cards-box').append(tempHtml);
@@ -201,7 +213,7 @@
 
             $.ajax({
                 type: "POST",
-                url: "/api/todos",
+                url: "http://localhost:8080/api/todos",
                 contentType: "application/json",
                 data: JSON.stringify(data),
                 success: function (response) {
@@ -213,14 +225,67 @@
 
         // 할 일을 삭제합니다.
         function deleteOne(id) {
+            let password = prompt("비밀번호를 입력하세요:");
+            if (!password) {
+                alert("비밀번호가 필요합니다.");
+                return;
+            }
+
             $.ajax({
                 type: "DELETE",
-                url: `/api/todos/${id}`,
+                url: `http://localhost:8080/api/todos/${id}`,
+                data: { password: password },
                 success: function (response) {
                     alert('할 일이 삭제되었습니다.');
                     window.location.reload();
+                },
+                error: function () {
+                    alert("비밀번호가 일치하지 않거나 삭제에 실패했습니다.");
                 }
-            })
+            });
+        }
+
+        // 할 일을 수정하기 위한 함수
+        function editPost(id) {
+            // 기존 내용을 숨기고, textarea를 보여줌
+            $(`#${id}-contents`).hide();
+            $(`#${id}-edit`).hide();
+
+            // textarea에 기존 내용을 채워줌
+            $(`#${id}-textarea`).val($(`#${id}-contents`).text().trim()).show();
+            $(`#${id}-submit`).show();
+        }
+
+        // 수정된 내용을 서버에 전송하고 업데이트하는 함수
+        function submitEdit(id) {
+            let newContent = $(`#${id}-textarea`).val().trim();
+            let password = prompt("비밀번호를 입력하세요:");
+
+            if (newContent === '' || !password) {
+                alert('내용과 비밀번호를 입력해주세요');
+                return;
+            }
+
+            let data = {
+                'description': newContent,
+                'password': password,
+                'updatedAt': new Date().toISOString()
+            };
+
+            $.ajax({
+                type: "PUT",
+                url: `http://localhost:8080/api/todos/${id}`,
+                contentType: "application/json",
+                data: JSON.stringify(data),
+                success: function (response) {
+                    alert('할 일이 성공적으로 수정되었습니다.');
+                    window.location.reload();  // 페이지를 새로고침하여 변경된 내용을 반영
+                },
+                error: function () {
+                    alert("비밀번호가 일치하지 않거나 수정에 실패했습니다.");
+                }
+            });
+
         }
 
         function isValidContents(title, contents, username, password) {
@@ -230,6 +295,7 @@
             }
             return true;
         }
+
     </script>
 </head>
 
